@@ -1,0 +1,830 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+   Name = "Rh2 Script",
+   Icon = 0, -- Icon in Topbar. Can use Lucide Icons (string) or Roblox Image (number). 0 to use no icon (default).
+   LoadingTitle = "RoBall",
+   LoadingSubtitle = "by Zynn",
+   ShowText = "Rayfield", -- for mobile users to unhide rayfield, change if you'd like
+   Theme = "Default", -- Check https://docs.sirius.menu/rayfield/configuration/themes
+
+   ToggleUIKeybind = "K", -- The keybind to toggle the UI visibility (string like "K" or Enum.KeyCode)
+
+   DisableRayfieldPrompts = false,
+   DisableBuildWarnings = false, -- Prevents Rayfield from warning when the script has a version mismatch with the interface
+
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = nil, -- Create a custom folder for your hub/game
+      FileName = "Big Hub"
+   },
+
+   Discord = {
+      Enabled = false, -- Prompt the user to join your Discord server if their executor supports it
+      Invite = "noinvitelink", -- The Discord invite code, do not include discord.gg/. E.g. discord.gg/ ABCD would be ABCD
+      RememberJoins = true -- Set this to false to make them join the discord every time they load it up
+   },
+
+   KeySystem = false, -- Set this to true to use our key system
+   KeySettings = {
+      Title = "Untitled",
+      Subtitle = "Key System",
+      Note = "No method of obtaining the key is provided", -- Use this to tell the user how to get a key
+      FileName = "Key", -- It is recommended to use something unique as other scripts using Rayfield may overwrite your key file
+      SaveKey = true, -- The user's key will be saved, but if you change the key, they will be unable to use your script
+      GrabKeyFromSite = false, -- If this is true, set Key below to the RAW site you would like Rayfield to get the key from
+      Key = {"Hello"} -- List of keys that will be accepted by the system, can be RAW file links (pastebin, github etc) or simple strings ("hello","key22")
+   }
+})
+
+local AutotimeTab = Window:CreateTab("Autotimes", nil) -- Title, Image
+local Section = AutotimeTab:CreateSection("Pick")
+
+local Toggle = AutotimeTab:CreateToggle({
+   Name = "Autotime/No QuickDraw",
+   CurrentValue = false,
+   Flag = "Toggle1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+   if not hookmetamethod then
+    warn("Executor does not support hookmetamethod.")
+    return
+end
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local shootEvent = ReplicatedStorage:WaitForChild("PlayerEvents"):WaitForChild("Shooting")
+
+local shotDelays = {
+    ["Standing Shot"] = 0.58,
+    ["Layup"] = 0.48,
+    ["Standing Layup"] = 0.50,
+    ["Close Post Fade"] = 0.60,
+    ["Post Fade"] = 0.60,
+    ["Close Post Hook"] = 0.48,
+    ["Side Post Hook"] = 0.30,
+    ["Moving Shot"] = 0.6888,
+    ["Close Layup"] = 0.45,
+    ["Reverse Layup"] = 0.66,
+    ["Floater"] = 0.40,
+    ["Close Floater"] = 0.39,
+    ["Post Hook"] = 0.47,
+}
+
+local dunkDelay = 0.53
+local dunkCooldown = 1.0
+local isDunkCharging = false
+local isShotCharging = false
+local lastDunkTime = 0
+
+local function isValidDunkSubType(subType)
+    return subType == 1 or subType == 2 or subType == 3
+end
+
+local oldNamecall
+oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+    local args = { ... }
+    local method = getnamecallmethod()
+
+    if self ~= shootEvent or method ~= "FireServer" then
+        return oldNamecall(self, ...)
+    end
+
+    local trigger, action, param1, param2 = unpack(args)
+
+    -- Handle Dunk
+    if trigger == true and (action == "Moving Dunk" or action == "Standing Dunk") and isValidDunkSubType(param1) then
+        local now = tick()
+        if isDunkCharging or (now - lastDunkTime) < dunkCooldown then
+            return oldNamecall(self, ...)
+        end
+
+        isDunkCharging = true
+        lastDunkTime = now
+
+        task.delay(dunkCooldown, function()
+            isDunkCharging = false
+        end)
+
+        task.delay(dunkDelay, function()
+            pcall(function()
+                shootEvent:FireServer(false, action, param1)
+            end)
+        end)
+
+        return oldNamecall(self, ...)
+    end
+
+    -- Handle Shot
+    if trigger == true and action == "Shooting" then
+        local shotType = param1
+
+        if not shotDelays[shotType] or isShotCharging then
+            return oldNamecall(self, ...)
+        end
+
+        isShotCharging = true
+        local delay = shotDelays[shotType]
+
+        task.delay(delay, function()
+            local releaseArgs = {false, "Shooting", shotType}
+            if param2 then
+                table.insert(releaseArgs, param2)
+            end
+
+            pcall(function()
+                shootEvent:FireServer(unpack(releaseArgs))
+            end)
+
+            isShotCharging = false
+        end)
+
+        return oldNamecall(self, ...)
+    end
+
+    return oldNamecall(self, ...)
+end)
+   end,
+})
+
+local Toggle = AutotimeTab:CreateToggle({
+   Name = "Autotime/Bronze QuickDraw",
+   CurrentValue = false,
+   Flag = "Toggle1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+   if not hookmetamethod then
+    warn("Executor does not support hookmetamethod.")
+    return
+end
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local shootEvent = ReplicatedStorage:WaitForChild("PlayerEvents"):WaitForChild("Shooting")
+
+local shotDelays = {
+    ["Standing Shot"] = 0.55,
+    ["Layup"] = 0.48,
+    ["Standing Layup"] = 0.50,
+    ["Close Post Fade"] = 0.60,
+    ["Post Fade"] = 0.60,
+    ["Close Post Hook"] = 0.48,
+    ["Side Post Hook"] = 0.30,
+    ["Moving Shot"] = 0.6888,
+    ["Close Layup"] = 0.45,
+    ["Reverse Layup"] = 0.66,
+    ["Floater"] = 0.40,
+    ["Close Floater"] = 0.39,
+    ["Post Hook"] = 0.47,
+}
+
+local dunkDelay = 0.53
+local dunkCooldown = 1.0
+local isDunkCharging = false
+local isShotCharging = false
+local lastDunkTime = 0
+
+local function isValidDunkSubType(subType)
+    return subType == 1 or subType == 2 or subType == 3
+end
+
+local oldNamecall
+oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+    local args = { ... }
+    local method = getnamecallmethod()
+
+    if self ~= shootEvent or method ~= "FireServer" then
+        return oldNamecall(self, ...)
+    end
+
+    local trigger, action, param1, param2 = unpack(args)
+
+    -- Handle Dunk
+    if trigger == true and (action == "Moving Dunk" or action == "Standing Dunk") and isValidDunkSubType(param1) then
+        local now = tick()
+        if isDunkCharging or (now - lastDunkTime) < dunkCooldown then
+            return oldNamecall(self, ...)
+        end
+
+        isDunkCharging = true
+        lastDunkTime = now
+
+        task.delay(dunkCooldown, function()
+            isDunkCharging = false
+        end)
+
+        task.delay(dunkDelay, function()
+            pcall(function()
+                shootEvent:FireServer(false, action, param1)
+            end)
+        end)
+
+        return oldNamecall(self, ...)
+    end
+
+    -- Handle Shot
+    if trigger == true and action == "Shooting" then
+        local shotType = param1
+
+        if not shotDelays[shotType] or isShotCharging then
+            return oldNamecall(self, ...)
+        end
+
+        isShotCharging = true
+        local delay = shotDelays[shotType]
+
+        task.delay(delay, function()
+            local releaseArgs = {false, "Shooting", shotType}
+            if param2 then
+                table.insert(releaseArgs, param2)
+            end
+
+            pcall(function()
+                shootEvent:FireServer(unpack(releaseArgs))
+            end)
+
+            isShotCharging = false
+        end)
+
+        return oldNamecall(self, ...)
+    end
+
+    return oldNamecall(self, ...)
+end)
+   end,
+})
+
+local Toggle = AutotimeTab:CreateToggle({
+   Name = "Autotime/Sliver qd",
+   CurrentValue = false,
+   Flag = "Toggle1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+   if not hookmetamethod then
+    warn("Executor does not support hookmetamethod.")
+    return
+end
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local shootEvent = ReplicatedStorage:WaitForChild("PlayerEvents"):WaitForChild("Shooting")
+
+local shotDelays = {
+    ["Standing Shot"] = 0.52,
+    ["Layup"] = 0.48,
+    ["Standing Layup"] = 0.50,
+    ["Close Post Fade"] = 0.60,
+    ["Post Fade"] = 0.60,
+    ["Close Post Hook"] = 0.48,
+    ["Side Post Hook"] = 0.30,
+    ["Moving Shot"] = 0.6888,
+    ["Close Layup"] = 0.45,
+    ["Reverse Layup"] = 0.66,
+    ["Floater"] = 0.40,
+    ["Close Floater"] = 0.39,
+    ["Post Hook"] = 0.47,
+}
+
+local dunkDelay = 0.53
+local dunkCooldown = 1.0
+local isDunkCharging = false
+local isShotCharging = false
+local lastDunkTime = 0
+
+local function isValidDunkSubType(subType)
+    return subType == 1 or subType == 2 or subType == 3
+end
+
+local oldNamecall
+oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+    local args = { ... }
+    local method = getnamecallmethod()
+
+    if self ~= shootEvent or method ~= "FireServer" then
+        return oldNamecall(self, ...)
+    end
+
+    local trigger, action, param1, param2 = unpack(args)
+
+    -- Handle Dunk
+    if trigger == true and (action == "Moving Dunk" or action == "Standing Dunk") and isValidDunkSubType(param1) then
+        local now = tick()
+        if isDunkCharging or (now - lastDunkTime) < dunkCooldown then
+            return oldNamecall(self, ...)
+        end
+
+        isDunkCharging = true
+        lastDunkTime = now
+
+        task.delay(dunkCooldown, function()
+            isDunkCharging = false
+        end)
+
+        task.delay(dunkDelay, function()
+            pcall(function()
+                shootEvent:FireServer(false, action, param1)
+            end)
+        end)
+
+        return oldNamecall(self, ...)
+    end
+
+    -- Handle Shot
+    if trigger == true and action == "Shooting" then
+        local shotType = param1
+
+        if not shotDelays[shotType] or isShotCharging then
+            return oldNamecall(self, ...)
+        end
+
+        isShotCharging = true
+        local delay = shotDelays[shotType]
+
+        task.delay(delay, function()
+            local releaseArgs = {false, "Shooting", shotType}
+            if param2 then
+                table.insert(releaseArgs, param2)
+            end
+
+            pcall(function()
+                shootEvent:FireServer(unpack(releaseArgs))
+            end)
+
+            isShotCharging = false
+        end)
+
+        return oldNamecall(self, ...)
+    end
+
+    return oldNamecall(self, ...)
+end)
+   end,
+})
+
+local Toggle = AutotimeTab:CreateToggle({
+   Name = "Autotime/Gold Quickdraw",
+   CurrentValue = false,
+   Flag = "Toggle1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+   if not hookmetamethod then
+    warn("Executor does not support hookmetamethod.")
+    return
+end
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local shootEvent = ReplicatedStorage:WaitForChild("PlayerEvents"):WaitForChild("Shooting")
+
+local shotDelays = {
+    ["Standing Shot"] = 0.51,
+    ["Layup"] = 0.48,
+    ["Standing Layup"] = 0.50,
+    ["Close Post Fade"] = 0.60,
+    ["Post Fade"] = 0.60,
+    ["Close Post Hook"] = 0.48,
+    ["Side Post Hook"] = 0.30,
+    ["Moving Shot"] = 0.6888,
+    ["Close Layup"] = 0.45,
+    ["Reverse Layup"] = 0.66,
+    ["Floater"] = 0.40,
+    ["Close Floater"] = 0.39,
+    ["Post Hook"] = 0.47,
+}
+
+local dunkDelay = 0.53
+local dunkCooldown = 1.0
+local isDunkCharging = false
+local isShotCharging = false
+local lastDunkTime = 0
+
+local function isValidDunkSubType(subType)
+    return subType == 1 or subType == 2 or subType == 3
+end
+
+local oldNamecall
+oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+    local args = { ... }
+    local method = getnamecallmethod()
+
+    if self ~= shootEvent or method ~= "FireServer" then
+        return oldNamecall(self, ...)
+    end
+
+    local trigger, action, param1, param2 = unpack(args)
+
+    -- Handle Dunk
+    if trigger == true and (action == "Moving Dunk" or action == "Standing Dunk") and isValidDunkSubType(param1) then
+        local now = tick()
+        if isDunkCharging or (now - lastDunkTime) < dunkCooldown then
+            return oldNamecall(self, ...)
+        end
+
+        isDunkCharging = true
+        lastDunkTime = now
+
+        task.delay(dunkCooldown, function()
+            isDunkCharging = false
+        end)
+
+        task.delay(dunkDelay, function()
+            pcall(function()
+                shootEvent:FireServer(false, action, param1)
+            end)
+        end)
+
+        return oldNamecall(self, ...)
+    end
+
+    -- Handle Shot
+    if trigger == true and action == "Shooting" then
+        local shotType = param1
+
+        if not shotDelays[shotType] or isShotCharging then
+            return oldNamecall(self, ...)
+        end
+
+        isShotCharging = true
+        local delay = shotDelays[shotType]
+
+        task.delay(delay, function()
+            local releaseArgs = {false, "Shooting", shotType}
+            if param2 then
+                table.insert(releaseArgs, param2)
+            end
+
+            pcall(function()
+                shootEvent:FireServer(unpack(releaseArgs))
+            end)
+
+            isShotCharging = false
+        end)
+
+        return oldNamecall(self, ...)
+    end
+
+    return oldNamecall(self, ...)
+end)
+   end,
+})
+
+local Toggle = AutotimeTab:CreateToggle({
+   Name = "Autotime/Hof quickdraw",
+   CurrentValue = false,
+   Flag = "Toggle1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+   if not hookmetamethod then
+    warn("Executor does not support hookmetamethod.")
+    return
+end
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local shootEvent = ReplicatedStorage:WaitForChild("PlayerEvents"):WaitForChild("Shooting")
+
+local shotDelays = {
+    ["Standing Shot"] = 0.49,
+    ["Layup"] = 0.48,
+    ["Standing Layup"] = 0.50,
+    ["Close Post Fade"] = 0.60,
+    ["Post Fade"] = 0.60,
+    ["Close Post Hook"] = 0.48,
+    ["Side Post Hook"] = 0.30,
+    ["Moving Shot"] = 0.6888,
+    ["Close Layup"] = 0.45,
+    ["Reverse Layup"] = 0.66,
+    ["Floater"] = 0.40,
+    ["Close Floater"] = 0.39,
+    ["Post Hook"] = 0.47,
+}
+
+local dunkDelay = 0.53
+local dunkCooldown = 1.0
+local isDunkCharging = false
+local isShotCharging = false
+local lastDunkTime = 0
+
+local function isValidDunkSubType(subType)
+    return subType == 1 or subType == 2 or subType == 3
+end
+
+local oldNamecall
+oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+    local args = { ... }
+    local method = getnamecallmethod()
+
+    if self ~= shootEvent or method ~= "FireServer" then
+        return oldNamecall(self, ...)
+    end
+
+    local trigger, action, param1, param2 = unpack(args)
+
+    -- Handle Dunk
+    if trigger == true and (action == "Moving Dunk" or action == "Standing Dunk") and isValidDunkSubType(param1) then
+        local now = tick()
+        if isDunkCharging or (now - lastDunkTime) < dunkCooldown then
+            return oldNamecall(self, ...)
+        end
+
+        isDunkCharging = true
+        lastDunkTime = now
+
+        task.delay(dunkCooldown, function()
+            isDunkCharging = false
+        end)
+
+        task.delay(dunkDelay, function()
+            pcall(function()
+                shootEvent:FireServer(false, action, param1)
+            end)
+        end)
+
+        return oldNamecall(self, ...)
+    end
+
+    -- Handle Shot
+    if trigger == true and action == "Shooting" then
+        local shotType = param1
+
+        if not shotDelays[shotType] or isShotCharging then
+            return oldNamecall(self, ...)
+        end
+
+        isShotCharging = true
+        local delay = shotDelays[shotType]
+
+        task.delay(delay, function()
+            local releaseArgs = {false, "Shooting", shotType}
+            if param2 then
+                table.insert(releaseArgs, param2)
+            end
+
+            pcall(function()
+                shootEvent:FireServer(unpack(releaseArgs))
+            end)
+
+            isShotCharging = false
+        end)
+
+        return oldNamecall(self, ...)
+    end
+
+    return oldNamecall(self, ...)
+end)
+   end,
+})
+
+local CatchMeifYouCanTab = Window:CreateTab("Speed", nil) -- Title, Image
+local Section = CatchMeifYouCanTab:CreateSection("Loki...")
+
+
+local Button = CatchMeifYouCanTab:CreateButton({
+   Name = "Speed",
+   Callback = function()
+   local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+
+local LocalPlayer = Players.LocalPlayer
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "SpeedGUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = game.CoreGui
+
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 230, 0, 70)
+Frame.Position = UDim2.new(0.02, 0, 0.4, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Frame.BorderSizePixel = 0
+Frame.Visible = true
+Frame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner", Frame)
+UICorner.CornerRadius = UDim.new(0, 12)
+
+local UIStroke = Instance.new("UIStroke", Frame)
+UIStroke.Thickness = 2
+UIStroke.Color = Color3.fromRGB(200, 0, 0)
+
+local TextBox = Instance.new("TextBox")
+TextBox.Size = UDim2.new(1, -20, 1, -20)
+TextBox.Position = UDim2.new(0, 10, 0, 10)
+TextBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+TextBox.BorderSizePixel = 0
+TextBox.Text = "Enter Speed (1-20)"
+TextBox.TextColor3 = Color3.fromRGB(255, 0, 0)
+TextBox.TextScaled = true
+TextBox.ClearTextOnFocus = true
+TextBox.Font = Enum.Font.GothamBlack
+TextBox.Parent = Frame
+
+local innerCorner = Instance.new("UICorner", TextBox)
+innerCorner.CornerRadius = UDim.new(0, 10)
+
+local innerStroke = Instance.new("UIStroke", TextBox)
+innerStroke.Color = Color3.fromRGB(255, 0, 0)
+innerStroke.Thickness = 1.5
+
+local ZynnButton = Instance.new("TextButton")
+ZynnButton.Size = UDim2.new(0, 60, 0, 60)
+ZynnButton.Position = UDim2.new(0, 10, 0, 10)
+ZynnButton.AnchorPoint = Vector2.new(0, 0)
+ZynnButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+ZynnButton.Text = "Zynn"
+ZynnButton.TextScaled = true
+ZynnButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ZynnButton.Font = Enum.Font.GothamBold
+ZynnButton.Parent = ScreenGui
+
+local zynnCorner = Instance.new("UICorner", ZynnButton)
+zynnCorner.CornerRadius = UDim.new(1, 0)
+
+local zynnStroke = Instance.new("UIStroke", ZynnButton)
+zynnStroke.Thickness = 2
+zynnStroke.Color = Color3.fromRGB(255, 255, 255)
+
+local guiVisible = true
+
+UIS.InputBegan:Connect(function(input, gameProcessed)
+	if input.KeyCode == Enum.KeyCode.RightShift and not gameProcessed then
+		guiVisible = not guiVisible
+		Frame.Visible = guiVisible
+	end
+end)
+
+ZynnButton.MouseButton1Click:Connect(function()
+	guiVisible = not guiVisible
+	Frame.Visible = guiVisible
+end)
+
+local currentSpeed = 16
+
+TextBox.FocusLost:Connect(function()
+	local inputSpeed = tonumber(TextBox.Text)
+	if inputSpeed and inputSpeed >= 1 and inputSpeed <= 20 then
+		currentSpeed = inputSpeed
+	else
+		TextBox.Text = "Invalid (1-20)"
+	end
+end)
+
+RunService.RenderStepped:Connect(function()
+	local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	if hum then
+		hum.WalkSpeed = currentSpeed
+	end
+end)
+   end,
+})
+
+local XpTab = Window:CreateTab("Fast ovr", nil) -- Title, Image
+local Section = XpTab:CreateSection("Xp")
+
+local Button = XpTab:CreateButton({
+   Name = "Xp script(put 100 if u want it to stop)",
+   Callback = function()
+   local STAMINA_THRESHOLD = 100
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local localPlayer = Players.LocalPlayer
+
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+ScreenGui.Name = "FancyStealGui"
+
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 250, 0, 120)
+Frame.Position = UDim2.new(0.5, -125, 0.1, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+Frame.BorderSizePixel = 0
+Frame.BackgroundTransparency = 0.15
+Frame.Parent = ScreenGui
+
+local glow = Instance.new("UIGradient")
+glow.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 85, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
+}
+glow.Rotation = 45
+glow.Parent = Frame
+
+local TextLabel = Instance.new("TextLabel")
+TextLabel.Size = UDim2.new(1, 0, 0, 40)
+TextLabel.Position = UDim2.new(0, 0, 0, 0)
+TextLabel.BackgroundTransparency = 1
+TextLabel.Text = "Stamina Threshold"
+TextLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+TextLabel.TextStrokeTransparency = 0
+TextLabel.Font = Enum.Font.GothamBold
+TextLabel.TextSize = 18
+TextLabel.Parent = Frame
+
+local TextBox = Instance.new("TextBox")
+TextBox.Size = UDim2.new(0.9, 0, 0, 40)
+TextBox.Position = UDim2.new(0.05, 0, 0.45, 0)
+TextBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+TextBox.TextColor3 = Color3.fromRGB(0, 170, 255)
+TextBox.Font = Enum.Font.GothamSemibold
+TextBox.TextSize = 22
+TextBox.PlaceholderText = tostring(STAMINA_THRESHOLD)
+TextBox.Text = ""
+TextBox.ClearTextOnFocus = false
+TextBox.Parent = Frame
+
+Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 8)
+
+local UIStroke = Instance.new("UIStroke", Frame)
+UIStroke.Thickness = 2
+UIStroke.Color = Color3.fromRGB(255, 0, 0)
+UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Name = "ZynToggle"
+ToggleBtn.Size = UDim2.new(0, 60, 0, 60)
+ToggleBtn.Position = UDim2.new(1, -70, 0, 10)
+ToggleBtn.AnchorPoint = Vector2.new(1, 0)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+ToggleBtn.Text = "Zyn"
+ToggleBtn.TextSize = 18
+ToggleBtn.TextColor3 = Color3.fromRGB(0, 170, 255)
+ToggleBtn.Font = Enum.Font.GothamBlack
+ToggleBtn.Parent = ScreenGui
+
+local zynCorner = Instance.new("UICorner", ToggleBtn)
+zynCorner.CornerRadius = UDim.new(1, 0)
+
+local zynStroke = Instance.new("UIStroke", ToggleBtn)
+zynStroke.Thickness = 2
+zynStroke.Color = Color3.fromRGB(255, 0, 0)
+
+local zynGlow = Instance.new("UIGradient")
+zynGlow.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 85, 255)),
+	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 0, 0)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 85, 255))
+}
+zynGlow.Rotation = 90
+zynGlow.Parent = ToggleBtn
+
+local guiVisible = true
+ToggleBtn.MouseButton1Click:Connect(function()
+	guiVisible = not guiVisible
+	Frame.Visible = guiVisible
+end)
+
+TextBox.FocusLost:Connect(function()
+	local num = tonumber(TextBox.Text)
+	if num then
+		STAMINA_THRESHOLD = num
+		TextBox.PlaceholderText = tostring(num)
+		TextBox.Text = ""
+	end
+end)
+
+local function getNearestPlayer()
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player ~= localPlayer and player.Character then
+			return player
+		end
+	end
+	return nil
+end
+
+task.spawn(function()
+	while true do
+		task.wait(0.1)
+
+		local backpack = localPlayer:FindFirstChild("Backpack")  
+		if not backpack then continue end  
+
+		local actionValues = backpack:FindFirstChild("ActionValues")  
+		if not actionValues then continue end  
+
+		local stamina = actionValues:FindFirstChild("Stamina")  
+		if not stamina then continue end  
+
+		if stamina.Value >= STAMINA_THRESHOLD then  
+			print("🔥 Stealing (Stamina:", stamina.Value .. ")")  
+
+			while stamina.Value >= STAMINA_THRESHOLD do  
+				task.wait(0.15)  
+
+				local targetPlayer = getNearestPlayer()  
+				if not targetPlayer then continue end  
+
+				local myChar = localPlayer.Character or localPlayer.CharacterAdded:Wait()  
+				local myHand = myChar:FindFirstChild("LeftHand")  
+				if not myHand then continue end  
+
+				local args = {  
+					true,  
+					"Steal",  
+					targetPlayer.Character,  
+					myHand  
+				}  
+
+				ReplicatedStorage:WaitForChild("PlayerEvents"):WaitForChild("Physical"):FireServer(unpack(args))  
+			end  
+
+			print("⛔ Stopped steal loop (Stamina below " .. STAMINA_THRESHOLD .. ")")  
+		end  
+	end
+end)
+   end,
+})
+
